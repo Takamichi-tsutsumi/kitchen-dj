@@ -1,8 +1,13 @@
 const SPI = require('pi-spi');
 const spi = SPI.initialize("/dev/spidev0.0");
 
+const THRESHOLD_RATE = 1.3;
+
 // buffers to send to digital output of spi
 const buffers = [0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f];
+
+// parse hex to decimal
+const hex2decimal = (hex) => (parseInt(hex.toString(), 16));
 
 // read value from sensor
 const readVal = (ch) => {
@@ -14,28 +19,66 @@ const readVal = (ch) => {
         return;
       }
 
-      resolve(d);
+      resolve(hex2decimal(d[1]));
     })
   });
 }
 
 
-// parse hex to decimal
- //const hex2decimal = (hex) => ();
+// sleep
+const sleep = (msec) => new Promise(resolve => setTimeout(resolve, msec));
 
 
 class Sensor {
   constructor(ch) {
     this.ch = ch;
+    this.on = false;
     this.start = this.start.bind(this);
     this.finish = this.finish.bind(this);
+    this.initialize = this.initialize.bind(this);
+    this.log = this.log.bind(this);
+
+    this.threshold = undefined;
   }
 
-  initialize() {
+  log(msg) {
+    console.log('Log ch', this.ch, ': ' + msg);
+  }
+
+  async initialize() {
+    this.log('Initializing...')
+    let val = 0, count = 0;
+
+    while (count < 5) {
+      await sleep(500);
+      val += await readVal(this.ch);
+      count++;
+    }
+
+    this.threshold = val / 5 * THRESHOLD_RATE;
+    this.log('Threshold set: ' + this.threshold.toString());
+
+    this.listen();
   }
 
   getCh() {
     return this.ch;
+  }
+
+  // fn is fired when input value is greater than threshold
+  listen() {
+    setInterval(async () => {
+      const val = await readVal(this.ch);
+      if (this.on && val < this.threshold) {
+        // start playing sounds
+        this.log('start playing sounds');
+        this.on = false;
+      } else if (!this.on && val >= this.threshold) {
+        // stop playing sounds
+        this.log('stop playing sounds');
+        this.on = true;
+      }
+    }, 1000)
   }
 
   start(fn, interval) {
@@ -47,56 +90,10 @@ class Sensor {
   }
 }
 
-const sensor1 = new Sensor(0);
-const sensor2 = new Sensor(1);
-const sensor3 = new Sensor(2);
-const sensor4 = new Sensor(3);
 
-sensor1.start(() => {
-  readVal(sensor1.getCh())
-    .then(d => console.log('sensor1: ', d))
-    .catch(e => console.error(e))
-}, 1000)
+const sensors = [new Sensor(0), new Sensor(1), new Sensor(2), new Sensor(3)];
 
-sensor2.start(() => {
-  readVal(sensor2.getCh())
-    .then(d => console.log('sensor2: ', d))
-    .catch(e => console.error(e))
-}, 1000)
-
-sensor3.start(() => {
-  readVal(sensor3.getCh())
-    .then(d => console.log('sensor3: ', d))
-    .catch(e => console.error(e))
-}, 1000)
-
-
-sensor4.start(() => {
-  readVal(sensor4.getCh())
-    .then(d => console.log('sensor4: ', d))
-    .catch(e => console.error(e))
-}, 1000)
-
-
-
-
-// setInterval(() => {
-//   readVal(0)
-//     .then((d) => {
-//       console.log("Sensor0: ", d);
-//     })
-//     .catch((e) => {
-//       console.error(e);
-//     })
-// }, 1000);
-//
-// setInterval(() => {
-//   readVal(1)
-//     .then((d) => {
-//       // console.log("Sensor1: ", d);
-//     })
-//     .catch((e) => {
-//       console.error(e);
-//     })
-// }, 1000);
+for (let sensor of sensors) {
+  sensor.initialize();
+}
 
