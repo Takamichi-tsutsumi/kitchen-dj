@@ -1,6 +1,9 @@
 const SPI = require('pi-spi');
 const spi = SPI.initialize("/dev/spidev0.0");
 
+const mpg = require('mpg123');
+const path = require('path');
+
 const THRESHOLD_RATE = 1.3;
 
 // buffers to send to digital output of spi
@@ -39,6 +42,9 @@ class Sensor {
     this.log = this.log.bind(this);
 
     this.threshold = undefined;
+
+    this.player = new mpg.MpgPlayer();
+    this.track = path.join(__dirname, 'data/set2',(ch+1).toString() + '.mp3');
   }
 
   log(msg) {
@@ -71,14 +77,47 @@ class Sensor {
       const val = await readVal(this.ch);
       if (this.on && val < this.threshold) {
         // start playing sounds
+        this.playSound();
         this.log('start playing sounds');
         this.on = false;
       } else if (!this.on && val >= this.threshold) {
         // stop playing sounds
+        this.stopSound();
         this.log('stop playing sounds');
         this.on = true;
       }
     }, 1000)
+  }
+
+  async playSound() {
+    let vol = 0;
+    const player = this.player;
+    player.play(this.track);
+    player.volume(vol);
+
+    while(vol < 70) {
+      await sleep(20);
+      vol += 1;
+      player.volume(vol)
+    }
+
+    player.on('end', () => {
+      player.play(this.track);
+    })
+  }
+
+  async stopSound() {
+    let vol = 70;
+    const player = this.player;
+    player.volume(vol);
+
+    while(vol > 0) {
+      await sleep(20);
+      vol -= 1;
+      player.volume(vol)
+    }
+
+    player.pause();
   }
 
   start(fn, interval) {
