@@ -33,7 +33,7 @@ const sleep = (msec) => new Promise(resolve => setTimeout(resolve, msec));
 
 
 class Sensor {
-  constructor(ch) {
+  constructor(ch, track) {
     this.ch = ch;
     this.on = false;
     this.start = this.start.bind(this);
@@ -44,7 +44,8 @@ class Sensor {
     this.threshold = undefined;
 
     this.player = new mpg.MpgPlayer();
-    this.track = path.join(__dirname, 'data/set2',(ch+1).toString() + '.mp3');
+    this.track = track;
+//    this.track = path.join(__dirname, 'data/set1',(ch+1).toString() + '.mp3');
   }
 
   log(msg) {
@@ -130,9 +131,16 @@ class Sensor {
 }
 
 
-const sensors = [new Sensor(0), new Sensor(1), new Sensor(2), new Sensor(3)];
+const sensors = [
+  new Sensor(0, path.join(__dirname, 'data/clash/voix.mp3')),
+  new Sensor(5, path.join(__dirname, 'data/clash/guitare.mp3')),
+  new Sensor(1, path.join(__dirname, 'data/clash/guitare2.mp3')),
+  new Sensor(2, path.join(__dirname, 'data/clash/basse.mp3')),
+  new Sensor(3, path.join(__dirname, 'data/clash/extra.mp3')),
+  new Sensor(4, path.join(__dirname, 'data/clash/batterie.mp3')),
+];
 
 for (let sensor of sensors) {
-  sensor.initialize();
+  sensor.playSound();
 }
 
