@@ -109,7 +109,7 @@ class LightSensor {
   }
 
   async volumeUp() {
-    player.volume(70);
+    this.player.volume(70);
     // let vol = 0;
     //
     //
@@ -121,17 +121,17 @@ class LightSensor {
   }
 
   async stopSound() {
-    let vol = 70;
-    const player = this.player;
-    player.volume(vol);
+    this.player.volume(0)
+    // let vol = 70;
+    // const player = this.player;
+    // player.volume(vol);
+    //
+    // while(vol > 0) {
+    //   await sleep(20);
+    //   vol -= 1;
+    //   player.volume(vol)
+    // }
 
-    while(vol > 0) {
-      await sleep(20);
-      vol -= 1;
-      player.volume(vol)
-    }
-
-    player.pause();
   }
 
   start() {
@@ -139,6 +139,90 @@ class LightSensor {
     this.listen();
   }
 }
+
+class PressureLightSensor {
+  constructor(ch, pin, track) {
+    this.ch = ch;
+    this.on = false;
+    this.threshold = undefined;
+    this.player = new mpg.MpgPlayer();
+    this.track = track;
+    this.led = new Gpio(pin, 'out');
+    this.initialized = false;
+
+    this.initialize = this.initialize.bind(this);
+    this.log = this.log.bind(this);
+    this.putOnTool = this.putOnTool.bind(this);
+    this.putOffTool = this.putOffTool.bind(this);
+
+    this.initialize();
+  }
+
+  log(msg) {
+    console.log('Log ch', this.ch, ': ' + msg);
+  }
+
+  turnon() {
+    this.led.writeSync(1);
+  }
+
+  turnoff() {
+    this.led.writeSync(0);
+  }
+
+  putOffTool() {
+    this.on = false;
+    this.turnoff();
+    this.volumeUp();
+  }
+
+  putOnTool() {
+    this.on = true;
+  }
+
+  async initialize() {
+    this.log('Initializing...')
+    let val = await readVal(this.ch);
+
+    this.threshold = val * 0.75;
+    this.log('Threshold set: ' + this.threshold.toString());
+    this.initialized = true;
+  }
+
+  // fn is fired when input value is greater than threshold
+  listen() {
+    setInterval(async () => {
+      const val = await readVal(this.ch);
+
+      if (this.on && val >= this.threshold) {
+        this.putOffTool();
+      } else if (!this.on && val < this.threshold) {
+        this.putOnTool();
+      }
+    }, 1000)
+  }
+
+  playSound() {
+    const player = this.player;
+    player.play(this.track);
+    player.volume(0);
+  }
+
+  async volumeUp() {
+    this.player.volume(70);
+  }
+
+  async stopsound() {
+    this.player.volume(0);
+  }
+
+  start() {
+    this.playSound();
+    this.listen();
+  }
+}
+
+
 
 const areSensorsReady = (sensors) => {
   return sensors.every((sensor) => (sensor.initialized && sensor.on));
@@ -148,9 +232,9 @@ const areSensorsReady = (sensors) => {
 const sensors = [
   new LightSensor(0, 21, path.join(__dirname, 'data/clash/extra.mp3')),
   new LightSensor(2, 26, path.join(__dirname, 'data/clash/basse.mp3')),
-// new Sensor(3, 16,path.join(__dirname, 'data/clash/voix.mp3'), true),
-// new Sensor(4, 19,path.join(__dirname, 'data/clash/guitare2.mp3'), true),
-// new Sensor(5, 13,path.join(__dirname, 'data/clash/guitare.mp3'), true),
+  new PressureSensor(3, 16,path.join(__dirname, 'data/clash/voix.mp3'), true),
+  new PressureSensor(4, 19,path.join(__dirname, 'data/clash/guitare2.mp3'), true),
+  new PressureSensor(5, 13,path.join(__dirname, 'data/clash/guitare.mp3'), true),
 ];
 
 while (!areSensorsReady(sensors)) {
@@ -163,5 +247,4 @@ drums.play(path.join(__dirname, 'data/clash/batterie.mp3'));
 drums.volume(70);
 
 sensors.forEach(sensor => sensor.start());
-
 
