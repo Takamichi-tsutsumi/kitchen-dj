@@ -34,22 +34,20 @@ const readVal = (ch) => {
 const sleep = (msec) => new Promise(resolve => setTimeout(resolve, msec));
 
 
-class Sensor {
-  constructor(ch, pin, track, reversed) {
+class LightSensor {
+  constructor(ch, pin, track) {
     this.ch = ch;
     this.on = false;
     this.start = this.start.bind(this);
     this.finish = this.finish.bind(this);
     this.initialize = this.initialize.bind(this);
     this.log = this.log.bind(this);
-    this.reversed = reversed;
 
     this.threshold = undefined;
 
     this.player = new mpg.MpgPlayer();
     this.track = track;
     this.led = new Gpio(pin, 'out');
-//    this.track = path.join(__dirname, 'data/set1',(ch+1).toString() + '.mp3');
   }
 
   log(msg) {
@@ -74,11 +72,7 @@ class Sensor {
       count++;
     }
 
-    if (this.reversed) {
-      this.threshold = val * 2;
-    } else {
-      this.threshold = val / 5 * THRESHOLD_RATE;
-    }
+    this.threshold = val / 5 * THRESHOLD_RATE;
     this.log('Threshold set: ' + this.threshold.toString());
 
     this.listen();
@@ -92,13 +86,13 @@ class Sensor {
   listen() {
     setInterval(async () => {
       const val = await readVal(this.ch);
-      if (this.on && ((!this.reversed && val < this.threshold) || (this.reversed && val > this.threshold))) {
+      if (this.on && val < this.threshold) {
         // start playing sounds
         this.playSound();
         this.log('start playing sounds');
         this.on = false;
         this.turnon();
-      } else if (!this.on && ((val >= this.threshold && !this.reversed) || (this.reversed && val <= this.threshold))) {
+      } else if (!this.on && val >= this.threshold) {
         // stop playing sounds
         this.stopSound();
         this.log('stop playing sounds');
@@ -150,12 +144,12 @@ class Sensor {
 
 
 const sensors = [
-  new Sensor(0, 21,path.join(__dirname, 'data/clash/voix.mp3')),
-  new Sensor(1, 20,path.join(__dirname, 'data/clash/guitare2.mp3')),
-  new Sensor(2, 26,path.join(__dirname, 'data/clash/basse.mp3')),
-  new Sensor(3, 16,path.join(__dirname, 'data/clash/extra.mp3'), true),
-  new Sensor(4, 19,path.join(__dirname, 'data/clash/batterie.mp3'), true),
-  new Sensor(5, 13,path.join(__dirname, 'data/clash/guitare.mp3'), true),
+  new LightSensor(0, 21,path.join(__dirname, 'data/clash/voix.mp3')),
+  new LightSensor(1, 20,path.join(__dirname, 'data/clash/guitare2.mp3')),
+  new LightSensor(2, 26,path.join(__dirname, 'data/clash/basse.mp3')),
+// new Sensor(3, 16,path.join(__dirname, 'data/clash/extra.mp3'), true),
+// new Sensor(4, 19,path.join(__dirname, 'data/clash/batterie.mp3'), true),
+// new Sensor(5, 13,path.join(__dirname, 'data/clash/guitare.mp3'), true),
 ];
 
 for (let sensor of sensors) {
