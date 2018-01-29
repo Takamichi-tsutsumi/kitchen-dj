@@ -1,6 +1,5 @@
 const SPI = require('pi-spi');
 const spi = SPI.initialize("/dev/spidev0.0");
-
 const mpg = require('mpg123');
 const path = require('path');
 
@@ -28,7 +27,6 @@ const readVal = (ch) => {
     })
   });
 }
-
 
 // sleep
 const sleep = (msec) => new Promise(resolve => setTimeout(resolve, msec));
@@ -59,11 +57,11 @@ class LightSensor {
   }
 
   turnon() {
-    this.led.writeSync(0);
+    this.led.writeSync(1);
   }
 
   turnoff() {
-    this.led.writeSync(1);
+    this.led.writeSync(0);
   }
 
   putOffTool() {
@@ -97,8 +95,10 @@ class LightSensor {
       const val = await readVal(this.ch);
 
       if (this.on && val < this.threshold) {
+        this.log('Put off');
         this.putOffTool();
       } else if (!this.on && val >= this.threshold) {
+        this.log('Put on');
         this.putOnTool();
       }
     }, 1000)
@@ -112,28 +112,10 @@ class LightSensor {
 
   async volumeUp() {
     this.player.volume(70);
-    // let vol = 0;
-    //
-    //
-    // while(vol < 70) {
-    //   await sleep(20);
-    //   vol += 2;
-    //   player.volume(vol)
-    // }
   }
 
   async stopSound() {
     this.player.volume(0)
-    // let vol = 70;
-    // const player = this.player;
-    // player.volume(vol);
-    //
-    // while(vol > 0) {
-    //   await sleep(20);
-    //   vol -= 1;
-    //   player.volume(vol)
-    // }
-
   }
 
   start() {
@@ -142,10 +124,10 @@ class LightSensor {
   }
 }
 
-class PressureLightSensor {
+class PressureSensor {
   constructor(ch, pin, track) {
     this.ch = ch;
-    this.on = false;
+    this.on = true;
     this.threshold = undefined;
     this.player = new mpg.MpgPlayer();
     this.track = track;
@@ -167,11 +149,11 @@ class PressureLightSensor {
   }
 
   turnon() {
-    this.led.writeSync(0);
+    this.led.writeSync(1);
   }
 
   turnoff() {
-    this.led.writeSync(1);
+    this.led.writeSync(0);
   }
 
   putOffTool() {
@@ -186,9 +168,10 @@ class PressureLightSensor {
 
   async initialize() {
     this.log('Initializing...')
-    let val = await readVal(this.ch);
+    let val = 0, count = 0;
+    val = await readVal(this.ch);
+    this.threshold = val + 8;
 
-    this.threshold = val * 0.75;
     this.log('Threshold set: ' + this.threshold.toString());
     this.initialized = true;
   }
@@ -196,11 +179,15 @@ class PressureLightSensor {
   // fn is fired when input value is greater than threshold
   listen() {
     setInterval(async () => {
-      const val = await readVal(this.ch);
+      const val = await readVal(this.ch, true);
 
-      if (this.on && val >= this.threshold) {
+      this.log(val);
+
+      if (this.on && val < this.threshold) {
+        this.log('Put off');
         this.putOffTool();
-      } else if (!this.on && val < this.threshold) {
+      } else if (!this.on && val >= this.threshold) {
+        this.log('Put on');
         this.putOnTool();
       }
     }, 1000)
@@ -233,43 +220,46 @@ const areSensorsReady = (sensors) => {
 }
 
 
-const sensors = [
-  new LightSensor(0, 21, path.join(__dirname, 'data/clash/extra.mp3')),
-  new LightSensor(2, 26, path.join(__dirname, 'data/clash/basse.mp3')),
-  new PressureSensor(3, 16,path.join(__dirname, 'data/clash/voix.mp3'), true),
-  new PressureSensor(4, 19,path.join(__dirname, 'data/clash/guitare2.mp3'), true),
-  new PressureSensor(5, 13,path.join(__dirname, 'data/clash/guitare.mp3'), true),
-];
+async function main() {
+  const sensors = [
+    new LightSensor(0, 21, path.join(__dirname, 'data/clash/extra.mp3')),
+    new LightSensor(2, 26, path.join(__dirname, 'data/clash/basse.mp3')),
+    new PressureSensor(3, 16,path.join(__dirname, 'data/clash/voix.mp3')),
+    new PressureSensor(4, 19,path.join(__dirname, 'data/clash/guitare2.mp3')),
+    new PressureSensor(5, 13,path.join(__dirname, 'data/clash/guitare.mp3')),
+  ];
 
-while (!areSensorsReady(sensors)) {
-  await sleep(1000);
+
+  await sleep(7000);
+
+  console.log('start drums...');
+
+  const drums = new mpg.MpgPlayer();
+  drums.play(path.join(__dirname, 'data/clash/batterie.mp3'));
+  sensors.forEach(sensor => sensor.start());
+
+  drums.volume(70);
+
+  // for reciepe
+  setTimeout(() => {
+    sensors[4].turnon();
+  }, 8000);
+
+  setTimeout(() => {
+    sensors[3].turnon();
+  }, 10000);
+
+  setTimeout(() => {
+    sensors[0].turnon();
+  }, 20000);
+
+  setTimeout(() => {
+    sensors[1].turnon();
+  }, 30000);
+
+  setTimeout(() => {
+    sensors[2].turnon();
+  }, 40000);
 }
 
-
-const drums = new mpg.MpgPlayer();
-drums.play(path.join(__dirname, 'data/clash/batterie.mp3'));
-drums.volume(70);
-
-sensors.forEach(sensor => sensor.start());
-
-// for reciepe
-setTimeout(() => {
-  sensors[4].turnon();
-}, 8000);
-
-setTimeout(() => {
-  sensors[3].turnon();
-}, 10000);
-
-setTimeout(() => {
-  sensors[0].turnon();
-}, 20000);
-
-setTimeout(() => {
-  sensors[1].turnon();
-}, 30000);
-
-setTimeout(() => {
-  sensors[2].turnon();
-}, 40000);
-
+main();
