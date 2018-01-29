@@ -248,3 +248,24 @@ drums.volume(70);
 
 sensors.forEach(sensor => sensor.start());
 
+// for reciepe
+setTimeout(() => {
+  sensors[4].turnon();
+}, 8000);
+
+setTimeout(() => {
+  sensors[3].turnon();
+}, 10000);
+
+setTimeout(() => {
+  sensors[0].turnon();
+}, 20000);
+
+setTimeout(() => {
+  sensors[1].turnon();
+}, 30000);
+
+setTimeout(() => {
+  sensors[2].turnon();
+}, 40000);
+
