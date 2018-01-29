@@ -57,21 +57,24 @@ class LightSensor {
   }
 
   turnon() {
-    this.led.writeSync(1);
+    this.led.writeSync(0);
   }
 
   turnoff() {
-    this.led.writeSync(0);
+    this.led.writeSync(1);
   }
 
   putOffTool() {
     this.on = false;
     this.turnoff();
     this.volumeUp();
+
   }
 
   putOnTool() {
+    this.turnOff
     this.on = true;
+    this.stopSound();
   }
 
   async initialize() {
@@ -127,7 +130,7 @@ class LightSensor {
 class PressureSensor {
   constructor(ch, pin, track) {
     this.ch = ch;
-    this.on = true;
+    this.on = false;
     this.threshold = undefined;
     this.player = new mpg.MpgPlayer();
     this.track = track;
@@ -149,11 +152,11 @@ class PressureSensor {
   }
 
   turnon() {
-    this.led.writeSync(1);
+    this.led.writeSync(0);
   }
 
   turnoff() {
-    this.led.writeSync(0);
+    this.led.writeSync(1);
   }
 
   putOffTool() {
@@ -164,13 +167,14 @@ class PressureSensor {
 
   putOnTool() {
     this.on = true;
+    this.stopSound();
   }
 
   async initialize() {
     this.log('Initializing...')
     let val = 0, count = 0;
     val = await readVal(this.ch);
-    this.threshold = val + 8;
+    this.threshold = val - 5;
 
     this.log('Threshold set: ' + this.threshold.toString());
     this.initialized = true;
@@ -183,10 +187,10 @@ class PressureSensor {
 
       this.log(val);
 
-      if (this.on && val < this.threshold) {
+      if (this.on && val > this.threshold) {
         this.log('Put off');
         this.putOffTool();
-      } else if (!this.on && val >= this.threshold) {
+      } else if (!this.on && val <= this.threshold) {
         this.log('Put on');
         this.putOnTool();
       }
@@ -200,10 +204,10 @@ class PressureSensor {
   }
 
   async volumeUp() {
-    this.player.volume(70);
+    this.player.volume(40);
   }
 
-  async stopsound() {
+  async stopSound() {
     this.player.volume(0);
   }
 
@@ -222,44 +226,62 @@ const areSensorsReady = (sensors) => {
 
 async function main() {
   const sensors = [
-    new LightSensor(0, 21, path.join(__dirname, 'data/clash/extra.mp3')),
-    new LightSensor(2, 26, path.join(__dirname, 'data/clash/basse.mp3')),
-    new PressureSensor(3, 16,path.join(__dirname, 'data/clash/voix.mp3')),
-    new PressureSensor(4, 19,path.join(__dirname, 'data/clash/guitare2.mp3')),
-    new PressureSensor(5, 13,path.join(__dirname, 'data/clash/guitare.mp3')),
+    /*
+     * sensor
+     * 0, 1 for light sensors
+     * 5, 6, 7 for pressure sensor
+     *
+     * LED
+     * whisk, spatula 2LEDs: 5, 3
+     * spices 4LEDs: 2, 4, 21
+     * */
+    new LightSensor(0, 3, path.join(__dirname, 'data/clash/extra.mp3')), // whisk
+    new LightSensor(1, 5, path.join(__dirname, 'data/clash/voix.mp3')),  // spatula
+    new PressureSensor(5, 2, path.join(__dirname, 'data/clash/basse.mp3')),    // salt
+    new PressureSensor(6, 4, path.join(__dirname, 'data/clash/guitare2.mp3')), // pepper
+    new PressureSensor(7, 21, path.join(__dirname, 'data/clash/guitare.mp3')), // basil
   ];
 
 
-  await sleep(7000);
+ await sleep(7000);
 
-  console.log('start drums...');
+ const drums = new mpg.MpgPlayer();
+ drums.play(path.join(__dirname, 'data/clash/batterie.mp3'));
 
-  const drums = new mpg.MpgPlayer();
-  drums.play(path.join(__dirname, 'data/clash/batterie.mp3'));
+//  sensors[0].turnon();
+//  sensors[1].turnon();
+//  sensors[2].turnon();
+//  sensors[3].turnon();
+//  sensors[4].turnon();
   sensors.forEach(sensor => sensor.start());
 
-  drums.volume(70);
+  drums.volume(40);
 
   // for reciepe
-  setTimeout(() => {
-    sensors[4].turnon();
-  }, 8000);
-
-  setTimeout(() => {
-    sensors[3].turnon();
-  }, 10000);
-
-  setTimeout(() => {
-    sensors[0].turnon();
-  }, 20000);
-
-  setTimeout(() => {
-    sensors[1].turnon();
-  }, 30000);
-
+  // salt
   setTimeout(() => {
     sensors[2].turnon();
-  }, 40000);
+  }, 12000);
+
+  // pepper
+  setTimeout(() => {
+    sensors[3].turnon();
+  }, 18000);
+
+  // whisk
+  setTimeout(() => {
+    sensors[0].turnon();
+  }, 30000);
+
+  // spatula
+  setTimeout(() => {
+    sensors[1].turnon();
+  }, 90000);
+
+  // basil
+  setTimeout(() => {
+    sensors[2].turnon();
+  }, 240000);
 }
 
 main();
