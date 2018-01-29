@@ -44,6 +44,8 @@ class LightSensor {
     this.led = new Gpio(pin, 'out');
     this.initialized = false;
 
+    this.turnoff();
+
     this.initialize = this.initialize.bind(this);
     this.log = this.log.bind(this);
     this.putOnTool = this.putOnTool.bind(this);
@@ -57,11 +59,11 @@ class LightSensor {
   }
 
   turnon() {
-    this.led.writeSync(1);
+    this.led.writeSync(0);
   }
 
   turnoff() {
-    this.led.writeSync(0);
+    this.led.writeSync(1);
   }
 
   putOffTool() {
@@ -155,6 +157,8 @@ class PressureLightSensor {
     this.putOnTool = this.putOnTool.bind(this);
     this.putOffTool = this.putOffTool.bind(this);
 
+    this.turnoff();
+
     this.initialize();
   }
 
@@ -163,11 +167,11 @@ class PressureLightSensor {
   }
 
   turnon() {
-    this.led.writeSync(1);
+    this.led.writeSync(0);
   }
 
   turnoff() {
-    this.led.writeSync(0);
+    this.led.writeSync(1);
   }
 
   putOffTool() {
