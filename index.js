@@ -38,16 +38,18 @@ class LightSensor {
   constructor(ch, pin, track) {
     this.ch = ch;
     this.on = false;
-    this.start = this.start.bind(this);
-    this.finish = this.finish.bind(this);
-    this.initialize = this.initialize.bind(this);
-    this.log = this.log.bind(this);
-
     this.threshold = undefined;
-
     this.player = new mpg.MpgPlayer();
     this.track = track;
     this.led = new Gpio(pin, 'out');
+    this.initialized = false;
+
+    this.initialize = this.initialize.bind(this);
+    this.log = this.log.bind(this);
+    this.putOnTool = this.putOnTool.bind(this);
+    this.putOffTool = this.putOffTool.bind(this);
+
+    this.initialize();
   }
 
   log(msg) {
@@ -62,6 +64,16 @@ class LightSensor {
     this.led.writeSync(0);
   }
 
+  putOffTool() {
+    this.on = false;
+    this.turnoff();
+    this.volumeUp();
+  }
+
+  putOnTool() {
+    this.on = true;
+  }
+
   async initialize() {
     this.log('Initializing...')
     let val = 0, count = 0;
@@ -74,49 +86,38 @@ class LightSensor {
 
     this.threshold = val / 5 * THRESHOLD_RATE;
     this.log('Threshold set: ' + this.threshold.toString());
-
-    this.listen();
-  }
-
-  getCh() {
-    return this.ch;
+    this.initialized = true;
   }
 
   // fn is fired when input value is greater than threshold
   listen() {
     setInterval(async () => {
       const val = await readVal(this.ch);
+
       if (this.on && val < this.threshold) {
-        // start playing sounds
-        this.playSound();
-        this.log('start playing sounds');
-        this.on = false;
-        this.turnon();
+        this.putOffTool();
       } else if (!this.on && val >= this.threshold) {
-        // stop playing sounds
-        this.stopSound();
-        this.log('stop playing sounds');
-        this.on = true;
-        this.turnoff();
+        this.putOnTool();
       }
     }, 1000)
   }
 
-  async playSound() {
-    let vol = 0;
+  playSound() {
     const player = this.player;
     player.play(this.track);
-    player.volume(vol);
+    player.volume(0);
+  }
 
-    while(vol < 70) {
-      await sleep(20);
-      vol += 1;
-      player.volume(vol)
-    }
-
-    player.on('end', () => {
-      player.play(this.track);
-    })
+  async volumeUp() {
+    player.volume(70);
+    // let vol = 0;
+    //
+    //
+    // while(vol < 70) {
+    //   await sleep(20);
+    //   vol += 2;
+    //   player.volume(vol)
+    // }
   }
 
   async stopSound() {
@@ -133,26 +134,34 @@ class LightSensor {
     player.pause();
   }
 
-  start(fn, interval) {
-    this.timer = setInterval(fn, interval);
+  start() {
+    this.playSound();
+    this.listen();
   }
+}
 
-  finish() {
-    clearInterval(this.timer);
-  }
+const areSensorsReady = (sensors) => {
+  return sensors.every((sensor) => (sensor.initialized && sensor.on));
 }
 
 
 const sensors = [
-  new LightSensor(0, 21,path.join(__dirname, 'data/clash/voix.mp3')),
-  new LightSensor(1, 20,path.join(__dirname, 'data/clash/guitare2.mp3')),
-  new LightSensor(2, 26,path.join(__dirname, 'data/clash/basse.mp3')),
-// new Sensor(3, 16,path.join(__dirname, 'data/clash/extra.mp3'), true),
-// new Sensor(4, 19,path.join(__dirname, 'data/clash/batterie.mp3'), true),
+  new LightSensor(0, 21, path.join(__dirname, 'data/clash/extra.mp3')),
+  new LightSensor(2, 26, path.join(__dirname, 'data/clash/basse.mp3')),
+// new Sensor(3, 16,path.join(__dirname, 'data/clash/voix.mp3'), true),
+// new Sensor(4, 19,path.join(__dirname, 'data/clash/guitare2.mp3'), true),
 // new Sensor(5, 13,path.join(__dirname, 'data/clash/guitare.mp3'), true),
 ];
 
-for (let sensor of sensors) {
-  sensor.initialize();
+while (!areSensorsReady(sensors)) {
+  await sleep(1000);
 }
+
+
+const drums = new mpg.MpgPlayer();
+drums.play(path.join(__dirname, 'data/clash/batterie.mp3'));
+drums.volume(70);
+
+sensors.forEach(sensor => sensor.start());
+
 
