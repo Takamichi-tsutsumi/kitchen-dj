@@ -8,9 +8,7 @@ const Gpio = require('onoff').Gpio;
 const THRESHOLD_RATE = 1.3;
 
 // buffers to send to digital output of spi
-const buffers = [0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f];
-
-// parse hex to decimal
+const buffers = [0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f]; // parse hex to decimal
 const hex2decimal = (hex) => (parseInt(hex.toString(), 16));
 
 // read value from sensor
@@ -50,14 +48,16 @@ class LightSensor {
     this.putOffTool = this.putOffTool.bind(this);
 
     this.initialize();
+    this.putoffcallback = undefined;
   }
 
   log(msg) {
     console.log('Log ch', this.ch, ': ' + msg);
   }
 
-  turnon() {
+  turnon(callback) {
     this.led.writeSync(0);
+    this.putoffcallback = callback;
   }
 
   turnoff() {
@@ -68,7 +68,10 @@ class LightSensor {
     this.on = false;
     this.turnoff();
     this.volumeUp();
-
+    if (this.putoffcallback) {
+      this.putoffcallback();
+      this.putoffcallback = undefined;
+    }
   }
 
   putOnTool() {
@@ -145,14 +148,17 @@ class PressureSensor {
     this.turnoff();
 
     this.initialize();
+
+    this.putoffcallback = undefined;
   }
 
   log(msg) {
     console.log('Log ch', this.ch, ': ' + msg);
   }
 
-  turnon() {
+  turnon(callback) {
     this.led.writeSync(0);
+    this.putoffcallback = callback;
   }
 
   turnoff() {
@@ -163,6 +169,10 @@ class PressureSensor {
     this.on = false;
     this.turnoff();
     this.volumeUp();
+    if (this.putoffcallback) {
+      this.putoffcallback();
+      this.putoffcallback = undefined;
+    }
   }
 
   putOnTool() {
@@ -174,7 +184,7 @@ class PressureSensor {
     this.log('Initializing...')
     let val = 0, count = 0;
     val = await readVal(this.ch);
-    this.threshold = val - 5;
+    this.threshold = val - 1;
 
     this.log('Threshold set: ' + this.threshold.toString());
     this.initialized = true;
@@ -223,6 +233,20 @@ const areSensorsReady = (sensors) => {
   return sensors.every((sensor) => (sensor.initialized && sensor.on));
 }
 
+const { exec } = require('child_process');
+
+const openImage = (file) => {
+  exec('fbi -T 1 ' + file, (err, stdout, stderr) => {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    console.log('stdout: ', stdout);
+    console.log('stderr: ', stderr);
+
+  });
+}
 
 async function main() {
   const sensors = [
@@ -243,45 +267,52 @@ async function main() {
   ];
 
 
- await sleep(7000);
+  openImage('./images/0.png');
+  await sleep(7000);
 
- const drums = new mpg.MpgPlayer();
- drums.play(path.join(__dirname, 'data/clash/batterie.mp3'));
+  const drums = new mpg.MpgPlayer();
+  drums.play(path.join(__dirname, 'data/clash/batterie.mp3'));
 
-//  sensors[0].turnon();
-//  sensors[1].turnon();
-//  sensors[2].turnon();
-//  sensors[3].turnon();
-//  sensors[4].turnon();
   sensors.forEach(sensor => sensor.start());
 
   drums.volume(40);
+  openImage('./images/1.png');
 
   // for reciepe
   // salt
   setTimeout(() => {
-    sensors[2].turnon();
+    sensors[2].turnon(
+      () => openImage('./images/2.png')
+    );
   }, 12000);
 
   // pepper
   setTimeout(() => {
-    sensors[3].turnon();
+    sensors[3].turnon(
+      () => openImage('./images/3.png')
+    );
   }, 18000);
 
   // whisk
   setTimeout(() => {
-    sensors[0].turnon();
-  }, 30000);
+    sensors[0].turnon(
+      () => openImage('./images/4.png')
+    );
+  }, 24000);
 
   // spatula
   setTimeout(() => {
-    sensors[1].turnon();
-  }, 90000);
+    sensors[1].turnon(
+      () => openImage('./images/5.png')
+    );
+  }, 60000);
 
   // basil
   setTimeout(() => {
-    sensors[2].turnon();
-  }, 240000);
+    sensors[4].turnon(
+      () => openImage('./images/6.png')
+    );
+  }, 90000);
 }
 
 main();
