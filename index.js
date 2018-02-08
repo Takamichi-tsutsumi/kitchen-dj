@@ -236,7 +236,7 @@ const areSensorsReady = (sensors) => {
 const { exec } = require('child_process');
 
 const openImage = (file) => {
-  exec('fbi -T 1 ' + file, (err, stdout, stderr) => {
+  exec('fbi -T 1 -a ' + file, (err, stdout, stderr) => {
     if (err) {
       console.log(err);
       return;
