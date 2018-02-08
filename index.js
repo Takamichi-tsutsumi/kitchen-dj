@@ -267,7 +267,7 @@ async function main() {
   ];
 
 
-  openImage('./images/0.png');
+  openImage(path.join(__dirname, 'images/0.png'))
   await sleep(7000);
 
   const drums = new mpg.MpgPlayer();
@@ -276,41 +276,41 @@ async function main() {
   sensors.forEach(sensor => sensor.start());
 
   drums.volume(40);
-  openImage('./images/1.png');
+  openImage(path.join(__dirname, 'images/1.png'))
 
   // for reciepe
   // salt
   setTimeout(() => {
     sensors[2].turnon(
-      () => openImage('./images/2.png')
+      () => openImage(path.join(__dirname, 'images/2.png'))
     );
   }, 12000);
 
   // pepper
   setTimeout(() => {
     sensors[3].turnon(
-      () => openImage('./images/3.png')
+      () => openImage(path.join(__dirname, 'images/3.png'))
     );
   }, 18000);
 
   // whisk
   setTimeout(() => {
     sensors[0].turnon(
-      () => openImage('./images/4.png')
+      () => openImage(path.join(__dirname, 'images/4.png'))
     );
   }, 24000);
 
   // spatula
   setTimeout(() => {
     sensors[1].turnon(
-      () => openImage('./images/5.png')
+      () => openImage(path.join(__dirname, 'images/5.png'))
     );
   }, 60000);
 
   // basil
   setTimeout(() => {
     sensors[4].turnon(
-      () => openImage('./images/6.png')
+      () => openImage(path.join(__dirname, 'images/6.png'))
     );
   }, 90000);
 }
